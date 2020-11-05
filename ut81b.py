@@ -207,7 +207,6 @@ def dmmGetData(device):
         ask(eo)
         data = getAnswer(ei)
         tries_left = tries_left - 1;
-    
     logging.debug('Raw data: %s', data)
     if not data or data[0] != 0x5A or len(data) < 41:
         return None
@@ -421,7 +420,7 @@ class GetHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         logging.debug("REQUEST: %s" % (self.path))
         if self.path=="/":
-			self.path="/index.html"
+            self.path="/index.html"
         if self.path.startswith('/api.json'):
             try:
                 self.send_response(200)

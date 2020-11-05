@@ -15,6 +15,11 @@ This program was designed for python 2.7 and requires the follwing libs
 2. pylab
 3. numpy
 
+raspbian
+```bash
+sudo apt-get install python-numpy python-scipy python-matplotlib python-usb
+```
+
 I'm only putting it online so i dont lose it, please dont expect any updates
 
 To use:
