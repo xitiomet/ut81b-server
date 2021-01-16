@@ -11,10 +11,11 @@ import json
 import re
 import pprint
 import numpy
+from routeput import *
 from os import curdir, sep
-from thread import *
-from BaseHTTPServer import BaseHTTPRequestHandler
-import urlparse
+from _thread import *
+from http.server import BaseHTTPRequestHandler,HTTPServer
+from urllib.parse import urlparse
 
 LOGGING_LEVELS = {'critical': logging.CRITICAL,
                   'error': logging.ERROR,
@@ -30,6 +31,10 @@ class StaticHolder:
     last_json = None
 
 last_json_holder = StaticHolder()
+
+rocon = RouteputConnection('wss://openstatic.org/channel/', 'multimeter')
+
+rocon.start()
 
 timebase = {
     0 :   (1,"ns"),
@@ -336,6 +341,7 @@ def dmmDisplayJSON(data, mRange):
         "current": mRange[2],
         "timestamp": int(math.ceil(time.time()*1000))
     }
+    rocon.default_channel.transmit(obj)
     broadcastText(json.dumps(obj))
 
 def offData():
@@ -378,10 +384,11 @@ def clientthread(conn):
     conn.close()
 
 def broadcastText(text):
+    #print("broadcast")# text: %s" % (text))
     last_json_holder.last_json = text
     for conn in connections:
         try:
-            conn.sendall("%s\n" % (text))
+            conn.sendall(bytes("%s\n" % (text), "UTF-8"))
         except:
             pass
 
@@ -390,7 +397,7 @@ def listenThread():
     PORT = 8181 # Arbitrary non-privileged port
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    logging.info('Socket created')
+    print('Socket created')
 
     #Bind socket to local host and port
     try:
@@ -399,16 +406,16 @@ def listenThread():
         logging.info('Bind failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1])
         sys.exit()
 
-    logging.info('Socket bind complete')
+    print('Socket bind complete')
 
     #Start listening on socket
     s.listen(10)
-    logging.info('Socket now listening')
+    print('Socket now listening')
 
     while keep_running:
         #wait to accept a connection - blocking call
         conn, addr = s.accept()
-        logging.info('Connected with ' + addr[0] + ':' + str(addr[1]))
+        print('Connected with ' + addr[0] + ':' + str(addr[1]))
         connections.append(conn)
         #start new thread takes 1st argument as a function name to be run, second is the tuple of arguments to the function.
         start_new_thread(clientthread ,(conn,))
@@ -427,9 +434,9 @@ class GetHandler(BaseHTTPRequestHandler):
                 self.send_header('Content-type','text/javascript')
                 self.end_headers()
                 if (last_json_holder.last_json != None):
-                    self.wfile.write(last_json_holder.last_json)
+                    self.wfile.write(bytes(last_json_holder.last_json,"UTF-8"))
                 else:
-                    self.wfile.write(offData())
+                    self.wfile.write(bytes(offData(),"UTF-8"))
             except Exception:
                 logging.info('web server connection dropped')
             return
@@ -438,32 +445,31 @@ class GetHandler(BaseHTTPRequestHandler):
             self.send_header('Content-type','text/html')
             self.end_headers()
             f = open(curdir + sep + self.path)
-            self.wfile.write(f.read())
+            self.wfile.write(bytes(f.read(),"UTF-8"))
             f.close()
         elif (self.path == '/index.js'):
             self.send_response(200)
             self.send_header('Content-type','text/javascript')
             self.end_headers()
             f = open(curdir + sep + self.path)
-            self.wfile.write(f.read())
+            self.wfile.write(bytes(f.read(),"UTF-8"))
             f.close()
     def log_message(self, format, *args):
         return
         
 def showException():
-    print "********* EXCEPTION *********"
+    #print "********* EXCEPTION *********"
     exc_type, exc_value, exc_traceback = sys.exc_info()
-    print exc_type
-    print "*** print_tb:"
+    #print exc_type
+    #print "*** print_tb:"
     traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
-    print "*** print_exception:"
+    #print "*** print_exception:"
     traceback.print_exception(exc_type, exc_value, exc_traceback,
                               limit=2, file=sys.stdout)
-    print "*****************************"
+    #print "*****************************"
     
 
 def webServer():
-    from BaseHTTPServer import HTTPServer
     logging.info('Starting HTTP Server')
     server = HTTPServer(('0.0.0.0', 8182), GetHandler)
     
@@ -497,6 +503,7 @@ if __name__ == "__main__":
     start_new_thread(listenThread, ())
     start_new_thread(webServer, ())
     while keep_running:
+        #print("main loop")
         if (data != None):
             try:
                 mRange = dmmGetRange(data)
@@ -512,10 +519,10 @@ if __name__ == "__main__":
         except Exception as gde:
             showException()
             if "disconnected" in str(gde):
-                print "Device Disconnected"
+                #print "Device Disconnected"
                 time.sleep(4)
                 try:
-                    print "Attempting Device Reconnect"
+                    #print "Attempting Device Reconnect"
                     device = dmmInit()
                     time.sleep(4)
                     connect(device[0])
