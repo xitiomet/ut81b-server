@@ -32,10 +32,6 @@ class StaticHolder:
 
 last_json_holder = StaticHolder()
 
-rocon = RouteputConnection('wss://openstatic.org/channel/', 'multimeter')
-
-rocon.start()
-
 timebase = {
     0 :   (1,"ns"),
     1 :   (2,"ns"),
@@ -341,7 +337,6 @@ def dmmDisplayJSON(data, mRange):
         "current": mRange[2],
         "timestamp": int(math.ceil(time.time()*1000))
     }
-    rocon.default_channel.transmit(obj)
     broadcastText(json.dumps(obj))
 
 def offData():
